@@ -32,12 +32,11 @@ const (
 	linkTypeRegular
 )
 
-func (e *TableElement) printTableLinks(ctx RenderContext) {
+func (e *TableElement) printTableLinks(w io.Writer, ctx RenderContext) {
 	if !e.shouldPrintTableLinks(ctx) {
 		return
 	}
 
-	w := ctx.blockStack.Current().Block
 	termWidth := int(ctx.blockStack.Width(ctx))
 
 	renderLinkText := func(link tableLink, position, padding int) string {

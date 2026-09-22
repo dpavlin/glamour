@@ -57,13 +57,23 @@ func (e *TableElement) Render(w io.Writer, ctx RenderContext) error {
 
 	_, _ = renderText(iw, bs.Current().Style.StylePrimitive, rules.BlockPrefix)
 	_, _ = renderText(iw, style, rules.Prefix)
-	width := int(ctx.blockStack.Width(ctx))
-
 	wrap := true
 	if ctx.options.TableWrap != nil {
 		wrap = *ctx.options.TableWrap
 	}
-	ctx.table.lipgloss = table.New().Width(width).Wrap(wrap)
+
+	t := table.New().Wrap(wrap)
+	if ctx.options.TableWidth != nil {
+		if *ctx.options.TableWidth > 0 {
+			t.Width(*ctx.options.TableWidth)
+		}
+	} else {
+		width := int(ctx.blockStack.Width(ctx))
+		if width > 0 {
+			t.Width(width)
+		}
+	}
+	ctx.table.lipgloss = t
 
 	if err := e.collectLinksAndImages(ctx); err != nil {
 		return err
@@ -136,15 +146,35 @@ func (e *TableElement) Finish(_ io.Writer, ctx RenderContext) error {
 	e.setStyles(ctx)
 	e.setBorders(ctx)
 
-	ow := ctx.blockStack.Current().Block
-	if _, err := ow.WriteString(ctx.table.lipgloss.String()); err != nil {
-		return fmt.Errorf("glamour: error writing to buffer: %w", err)
+	isUnconstrained := (ctx.options.TableWidth != nil && *ctx.options.TableWidth == 0)
+
+	if isUnconstrained && ctx.renderedTables != nil {
+		var tb bytes.Buffer
+		if _, err := tb.WriteString(ctx.table.lipgloss.String()); err != nil {
+			return fmt.Errorf("glamour: error writing to buffer: %w", err)
+		}
+
+		_, _ = renderText(&tb, ctx.blockStack.With(rules.StylePrimitive), rules.Suffix)
+		_, _ = renderText(&tb, ctx.blockStack.Current().Style.StylePrimitive, rules.BlockSuffix)
+
+		e.printTableLinks(&tb, ctx)
+
+		tableIdx := len(*ctx.renderedTables)
+		*ctx.renderedTables = append(*ctx.renderedTables, tb.String())
+		placeholder := fmt.Sprintf("\x00GLAMOUR_TABLE_%d\x00", tableIdx)
+		ow := ctx.blockStack.Current().Block
+		ow.WriteString(placeholder)
+	} else {
+		ow := ctx.blockStack.Current().Block
+		if _, err := ow.WriteString(ctx.table.lipgloss.String()); err != nil {
+			return fmt.Errorf("glamour: error writing to buffer: %w", err)
+		}
+
+		_, _ = renderText(ow, ctx.blockStack.With(rules.StylePrimitive), rules.Suffix)
+		_, _ = renderText(ow, ctx.blockStack.Current().Style.StylePrimitive, rules.BlockSuffix)
+
+		e.printTableLinks(ow, ctx)
 	}
-
-	_, _ = renderText(ow, ctx.blockStack.With(rules.StylePrimitive), rules.Suffix)
-	_, _ = renderText(ow, ctx.blockStack.Current().Style.StylePrimitive, rules.BlockSuffix)
-
-	e.printTableLinks(ctx)
 
 	ctx.table.lipgloss = nil
 	return nil

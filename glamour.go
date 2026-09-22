@@ -187,6 +187,15 @@ func WithTableWrap(tableWrap bool) TermRendererOption {
 	}
 }
 
+// WithTableWidth sets the width for tables.
+// If set to 0, tables are rendered at their natural content width without wrapping or truncation.
+func WithTableWidth(tableWidth int) TermRendererOption {
+	return func(tr *TermRenderer) error {
+		tr.ansiOptions.TableWidth = &tableWidth
+		return nil
+	}
+}
+
 // WithInlineTableLinks forces tables to render links inline. By default,links
 // are rendered as a list of links at the bottom of the table.
 func WithInlineTableLinks(inlineTableLinks bool) TermRendererOption {

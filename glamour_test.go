@@ -370,3 +370,48 @@ func TestWithChromaFormatterCustom(t *testing.T) {
 
 	golden.RequireEqual(t, []byte(b))
 }
+
+func TestTableWithoutWrapWithWordWrap(t *testing.T) {
+	md := `This is a long paragraph that should definitely be wrapped at eighty characters width to test the wrapping behavior of paragraphs while ensuring that tables remain unwrapped.
+
+| ID | Name | Long Description Column | Status |
+| --- | --- | --- | --- |
+| 1 | First | A very long description that would wrap across multiple lines if table wrapping is enabled | Active |
+`
+
+	r, err := NewTermRenderer(
+		WithStandardStyle("dark"),
+		WithWordWrap(80),
+		WithTableWrap(false),
+		WithTableWidth(0),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := r.Render(md)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	// The first paragraph should have wrapped to multiple lines
+	if len(lines) < 3 {
+		t.Fatalf("expected paragraph to wrap, but got too few lines: %d", len(lines))
+	}
+
+	// Verify the table row is intact on a single wide line without wrapping or ellipsis truncation
+	foundUnwrappedRow := false
+	for _, l := range lines {
+		if strings.Contains(l, "A very long description that would wrap across multiple lines") {
+			foundUnwrappedRow = true
+			if strings.Contains(l, "…") {
+				t.Fatalf("table row contains ellipsis truncation: %s", l)
+			}
+		}
+	}
+	if !foundUnwrappedRow {
+		t.Fatalf("expected unwrapped table row with full description, got output:\n%s", out)
+	}
+}
+

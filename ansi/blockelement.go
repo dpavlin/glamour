@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 )
@@ -16,6 +17,7 @@ type BlockElement struct {
 	Style   StyleBlock
 	Margin  bool
 	Newline bool
+	Wrap    bool
 }
 
 // Render renders a BlockElement.
@@ -38,6 +40,13 @@ func (e *BlockElement) Finish(w io.Writer, ctx RenderContext) error {
 			int(bs.Width(ctx)),
 			" ,.;-+|",
 		)
+
+		if ctx.renderedTables != nil && len(*ctx.renderedTables) > 0 {
+			for idx, tbl := range *ctx.renderedTables {
+				placeholder := fmt.Sprintf("\x00GLAMOUR_TABLE_%d\x00", idx)
+				s = strings.ReplaceAll(s, placeholder, tbl)
+			}
+		}
 
 		mw := NewMarginWriter(ctx, w, bs.Current().Style)
 		defer mw.Close() //nolint:errcheck

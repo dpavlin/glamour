@@ -31,6 +31,7 @@ type Options struct {
 	BaseURL          string
 	WordWrap         int
 	TableWrap        *bool
+	TableWidth       *int
 	InlineTableLinks bool
 	PreserveNewLines bool
 	Styles           StyleConfig
