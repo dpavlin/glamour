@@ -87,10 +87,7 @@ func (e *CodeBlockElement) Render(w io.Writer, ctx RenderContext) error {
 	if rules.Chroma != nil {
 		theme = chromaStyleTheme
 		mutex.Lock()
-		// Don't register the style if it's already registered.
-		_, ok := styles.Registry[theme]
-		if !ok {
-			styles.Register(chroma.MustNewStyle(theme,
+		styles.Register(chroma.MustNewStyle(theme,
 				chroma.StyleEntries{
 					chroma.Text:                chromaStyle(rules.Chroma.Text),
 					chroma.Error:               chromaStyle(rules.Chroma.Error),
@@ -124,7 +121,6 @@ func (e *CodeBlockElement) Render(w io.Writer, ctx RenderContext) error {
 					chroma.GenericSubheading:   chromaStyle(rules.Chroma.GenericSubheading),
 					chroma.Background:          chromaStyle(rules.Chroma.Background),
 				}))
-		}
 		mutex.Unlock()
 	}
 
