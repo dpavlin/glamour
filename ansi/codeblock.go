@@ -3,8 +3,11 @@ package ansi
 import (
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
+	"github.com/AlexanderGrooff/mermaid-ascii/pkg/diagram"
+	"github.com/AlexanderGrooff/mermaid-ascii/pkg/render"
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/quick"
 	"github.com/alecthomas/chroma/v2/styles"
@@ -123,6 +126,24 @@ func (e *CodeBlockElement) Render(w io.Writer, ctx RenderContext) error {
 				}))
 		}
 		mutex.Unlock()
+	}
+
+	if strings.EqualFold(e.Language, "mermaid") || strings.EqualFold(e.Language, "mmd") {
+		cfg := diagram.DefaultConfig()
+		cfg.UseAscii = false
+		renderedDiagram, err := render.RenderDiagram(strings.TrimSpace(e.Code), cfg)
+		if err == nil && strings.TrimSpace(renderedDiagram) != "" {
+			trimmed := strings.TrimRight(renderedDiagram, "\r\n")
+			if ctx.renderedTables != nil {
+				idx := len(*ctx.renderedTables)
+				*ctx.renderedTables = append(*ctx.renderedTables, trimmed)
+				placeholder := fmt.Sprintf("\x00GLAMOUR_TABLE_%d\x00", idx)
+				_, err := io.WriteString(w, placeholder)
+				return err
+			}
+			_, err := io.WriteString(w, trimmed)
+			return err
+		}
 	}
 
 	iw := NewIndentWriter(w, int(indentation+margin), func(_ io.Writer) {
